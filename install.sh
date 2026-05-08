@@ -53,11 +53,7 @@ command -v git >/dev/null || die "git is required."
 command -v npm >/dev/null || die "npm is required (install Node.js first)."
 command -v python3 >/dev/null || die "python3 is required."
 
-# Check Node version
-NODE_VER="$(node -v | sed 's/^v//' 2>/dev/null || echo '0')"
-if ! printf '%s\n18.0.0\n' "$NODE_VER" | sort -V -C; then
-    die "Node.js 18+ is required. Found: ${NODE_VER}"
-fi
+
 
 # Check pi
 echo "Checking pi..."
@@ -87,7 +83,6 @@ fi
 # Copy CLI
 echo "Installing chasm CLI..."
 cp "$CLI_SRC" "${BIN_DIR}/chasm"
-cp "${BIN_DIR}/chasm" "${BIN_DIR}/chasm"
 chmod +x "${BIN_DIR}/chasm"
 
 # Ensure bin is on PATH

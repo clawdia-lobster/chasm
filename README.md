@@ -1,8 +1,16 @@
 # Chasm
 
-Filesystem-based text adventures for the terminal. Each world is a directory of
-markdown files; a language model narrates your story through the [pi coding
-harness](https://pi.dev).
+## A generative multiplayer interactive fiction text adventure
+
+Chasm is a text adventure game in a world you can specify. It uses generative
+artificial intelligence (LLMs) to generate scenes and characters as you play.
+
+Unlike simply role-playing with a chatbot, important state persists (locations,
+characters, dialogue, events and so on) between users.
+
+Each world is simply a directory of markdown files: a language model narrates
+your story through the [pi coding harness](https://pi.dev) (and inherits its
+architecture).
 
 ## Install
 
@@ -14,9 +22,7 @@ cd chasm
 ./install.sh --local
 ```
 
-This copies `chasm` to `~/.local/bin` and installs the game template to
-`~/.local/share/chasm/template/`. If `pi` is not on your PATH, the installer
-will install it via npm.
+If `pi` is not on your PATH, the installer will install it via npm.
 
 **Before playing:** configure a model in pi:
 
@@ -25,7 +31,10 @@ pi /login
 ```
 
 Chasm requires a model with tool-use support (function calling). Good choices
-in 2026: DeepSeek V4 Pro, Qwen3.6, Sonnet 4.5 via OpenRouter.
+as of 2026: Kimi K2.5, Sonnet 4.5 via OpenRouter. You can configure local models
+via vLLM. Qwen 3.6 27b, Gemma 4 work fine.
+
+> **TODO:** A non-git install method (curl | bash) is planned.
 
 ## Quick Start
 
@@ -39,80 +48,15 @@ and starting place. The narrator then drops you into the world.
 
 Resume later: `chasm play sunken-quarter`.
 
-## How It Works
+## How It Works (Briefly)
 
 A Chasm world is a **git repo** of markdown files. The narrator reads state,
-interprets your commands, and writes the story back:
-
-| File | What it holds |
-|------|---------------|
-| `memory/WORLD.md` | Setting, genre, prose style, rules |
-| `memory/WORLD_STATE.md` | Time, weather, player pointer, quests |
-| `memory/places/*.md` | Locations with exits and sensory detail |
-| `memory/characters/*.md` | NPCs with motives, memories, inventory |
-| `memory/items/*.md` | Portable objects with usage and provenance |
-| `memory/events/*.md` | Append-only log of what happened |
-
-Everything is visible. Everything is editable. Save in-world with:
-
-```bash
-bash bin/save "[narrative] what you did"
-```
-
-The narrator loads `memory/AGENTS.md` at session start — a spec defining narrative
-voice, state-mutation rules, and the amnesia bootstrap. See `SPEC.md` for the
-full system contract.
-
-## Design a World
-
-`chasm new` copies the template. To design a world manually, write
-`memory/WORLD.md` — the design document — then create starting places and
-characters. The rest emerges through play.
-
-Key format specs live in the template itself:
-
-- `memory/CHARACTERS.md` — character frontmatter and archetypes
-- `memory/PLACES.md` — place format, coordinates, exits
-- `memory/ITEMS.md` — item types and state transitions
-- `memory/EVENTS.md` — classification and compaction strategy
-- `memory/QUESTS.md` — quest stages and status tracking
-
-A world workspace is self-contained. Distribute it as a git repository. Players
-need only `pi` and the world files.
-
-## Structure
-
-```
-chasm/                          # This repository (the system)
-├── chasm                       # CLI — new, play, list
-├── install.sh                  # System installer
-├── template/                   # Skeleton game workspace
-│   ├── settings.json           # Pi config (model, extensions)
-│   ├── extensions/             # chasm-ui.ts (compact tool output)
-│   ├── bin/                    # save script + bootstrap Q&A
-│   └── memory/                 # Narrator spec + format docs
-└── SPEC.md                     # Full system specification
-```
-
-Each instantiated game is:
-
-```
-~/.local/share/chasm/games/my-world/
-├── settings.json
-├── extensions/
-├── bin/
-└── memory/
-    ├── WORLD.md
-    ├── WORLD_STATE.md
-    ├── places/
-    ├── characters/
-    ├── items/
-    └── events/
-```
+interprets your commands, and writes the story back. Everything is visible and
+editable. See `docs/architecture.md` for the full picture.
 
 ## Troubleshooting
 
-**Model not configured:** Run `pi /login` or edit `settings.json` manually.
+**Model not configured:** Run `pi /login` or edit `settings.json` and `models.json` manually.
 
 **First launch shows placeholder text:** Run `chasm play` again; the bootstrap
 runs only when `WORLD.md` is uninitialised.
@@ -122,4 +66,4 @@ the full path.
 
 ## License
 
-AGPL-3.0. See `LICENSE`.
+MIT. See `LICENSE`.
