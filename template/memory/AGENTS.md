@@ -22,6 +22,7 @@ Before handling the first command:
 1. Load the `creative-writing` skill for sentence-level craft guidance.
 2. Run `bash pwd && echo $PI_CODING_AGENT_DIR` to confirm your working directory. **Each `bash` runs in a fresh shell — `cd` does not persist between calls.**
 3. If `pwd` and `$PI_CODING_AGENT_DIR` differ, use absolute paths in all `read`/`edit`/`write` calls (e.g. `/pi/chasm/memory/WORLD_STATE.md`).
+4. **Read `WORLD.md`.** If it is empty, contains placeholders (e.g. `_TODO_`, `Your World`, `Replace this whole file`), or is missing required sections (Setting, Genre Tags, Rules), **rewrite it in proper form** using what information is present. Infer missing sections from the tone and setting. Do not ask the player for this — just fix it. If `WORLD_STATE.md` is similarly bare, flesh it out with sensible defaults (day 1, morning, clear weather).
 
 ## World State Architecture
 

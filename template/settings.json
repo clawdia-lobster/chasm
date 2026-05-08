@@ -4,9 +4,7 @@
   "packages": [
     "git:github.com/jo-inc/pi-mem"
   ],
-  "extensions": [
-    "extensions/chasm-ui.ts"
-  ],
+  "extensions": [],
   "quietStartup": false,
   "theme": "dark",
   "hideThinkingBlock": true,

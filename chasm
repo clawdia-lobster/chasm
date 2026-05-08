@@ -26,13 +26,14 @@ def print_help():
     print("Commands:")
     print("  new GAME_NAME [--dir PATH]    Scaffold a new game workspace")
     print("  play GAME_NAME                Launch a game (bootstraps on first run)")
+    print("  delete GAME_NAME [--force]    Destroy a game workspace")
     print("  list                          List all games")
     print("  --help                        Show this help text")
     print("")
     print("Examples:")
     print("  chasm new sunken-quarter")
     print("  chasm play sunken-quarter")
-    print("  chasm new milliways --dir ~/Games")
+    print("  chasm delete sunken-quarter")
     print("  chasm list")
 
 
@@ -99,6 +100,27 @@ def cmd_play(args: argparse.Namespace) -> None:
     os.execvp("pi", ["pi"] + args.extra)
 
 
+def cmd_delete(args: argparse.Namespace) -> None:
+    name = args.name
+    target = None
+
+    if (GAMES_DIR / name).is_dir():
+        target = GAMES_DIR / name
+    elif Path(name).is_dir():
+        target = Path(name).resolve()
+    else:
+        die(f"Game '{name}' not found.")
+
+    if not args.force:
+        ans = input(f"Delete {target}? This cannot be undone. [y/N]: ")
+        if ans.lower() not in ("y", "yes"):
+            print("Aborted.")
+            return
+
+    shutil.rmtree(target)
+    print(f"Deleted {target}.")
+
+
 def cmd_list(_: argparse.Namespace) -> None:
     if not GAMES_DIR.exists():
         print("No games found. Create one with 'chasm new GAME_NAME'.")
@@ -141,6 +163,10 @@ def main():
     p_play.add_argument("name")
     p_play.add_argument("extra", nargs=argparse.REMAINDER, default=[])
 
+    p_delete = subparsers.add_parser("delete")
+    p_delete.add_argument("name")
+    p_delete.add_argument("--force", action="store_true", help="Skip confirmation")
+
     subparsers.add_parser("list")
 
     args = parser.parse_args()
@@ -153,6 +179,8 @@ def main():
         cmd_new(args)
     elif args.command == "play":
         cmd_play(args)
+    elif args.command == "delete":
+        cmd_delete(args)
     elif args.command == "list":
         cmd_list(args)
     else:
