@@ -97,7 +97,15 @@ def cmd_play(args: argparse.Namespace) -> None:
     os.environ["PI_CODING_AGENT_DIR"] = str(target)
     os.environ["PI_MEMORY_DIR"] = str(target / "memory")
     os.chdir(target)
-    os.execvp("pi", ["pi"] + args.extra)
+
+    # Default to continuing previous session; user can override with session flags
+    session_flags = {"--continue", "-c", "--no-session", "--session", "--fork"}
+    if any(f in args.extra for f in session_flags):
+        pi_args = ["pi"] + args.extra
+    else:
+        pi_args = ["pi", "--continue"] + args.extra
+
+    os.execvp("pi", pi_args)
 
 
 def cmd_delete(args: argparse.Namespace) -> None:
