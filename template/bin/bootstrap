@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""First-launch bootstrap -- creates WORLD.md and WORLD_STATE.md from user Q&A.
+Run via `chasm play` when memory/WORLD.md is uninitialised."""
+
+import os
+import sys
+import textwrap
+from pathlib import Path
+
+
+def prompt(label: str) -> str:
+    B, R = ("\x1b[1m", "\x1b[0m") if sys.stdout.isatty() else ("", "")
+    return input(f"{B}{label}{R}: ")
+
+
+def main():
+    print("")
+    print("Welcome to Chasm! Let's build your world.")
+    print("")
+
+    title = prompt("Name of your world")
+    setting = prompt("Describe the setting in one or two sentences")
+    genre = prompt("Primary genre (e.g. historical-fantasy, sci-fi, horror)")
+    tone = prompt("Tone (e.g. grim-wry, epic, noir, wonder)")
+    rule = prompt("One unique rule of this world")
+    starting_place = prompt("Name the starting location")
+
+    memory_dir = Path(__file__).resolve().parent.parent / "memory"
+
+    world_md = textwrap.dedent(f"""\
+        # {title}
+
+        ## Setting
+
+        {setting}
+
+        ## Genre Tags
+
+        - primary: {genre}
+        - tone: {tone}
+
+        ## Prose Style
+
+        Write in second-person present tense. Be brief. Show, don't tell. Concrete nouns over abstract adjectives.
+
+        ## Rules
+
+        - {rule}
+
+        ## Active Threats / Plot Threads
+
+        - The player awakens with no memory, in a strange place.
+        """)
+
+    world_state_md = textwrap.dedent(f"""\
+        # Current World State
+
+        ## Player
+        - character: null
+        - starting_place: {starting_place}
+        - condition: amnesiac
+
+        ## Time
+        - day: 1
+        - time_of_day: morning
+
+        ## Weather
+        - condition: clear
+
+        ## Conditions
+
+        ## Active Quests
+
+        ## Recent Events
+        """)
+
+    place_slug = starting_place.lower().replace(" ", "-")
+    place_md = textwrap.dedent(f"""\
+        ---
+        name: "{starting_place}"
+        coords: {{x: 0, y: 0}}
+        appearance: "A place you do not yet recognise."
+        atmosphere: "The air is still. You are alone."
+        terrain: "unknown"
+        state: "normal"
+        ---
+
+        # {starting_place}
+
+        The beginning. Details to be discovered.
+        """)
+
+    (memory_dir / "WORLD.md").write_text(world_md)
+    (memory_dir / "WORLD_STATE.md").write_text(world_state_md)
+    (memory_dir / "places" / f"{place_slug}.md").write_text(place_md)
+
+    print("")
+    print(f"World created: {title}")
+    print("")
+    print("You can edit:")
+    print(f"  {memory_dir / 'WORLD.md'}        -- world rules, genre, threats")
+    print(f"  {memory_dir / 'WORLD_STATE.md'}   -- time, weather, conditions")
+    print(f"  {memory_dir / 'places' / f'{place_slug}.md'} -- your starting place")
+    print("  settings.json                  -- model and provider configuration")
+    print("")
+    print("Model setup: pi uses /login to configure providers.")
+    print("Alternatively, edit settings.json at the game root.")
+    print("")
+
+
+if __name__ == "__main__":
+    main()

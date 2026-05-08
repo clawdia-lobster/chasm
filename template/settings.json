@@ -1,0 +1,12 @@
+{
+  "defaultProvider": "",
+  "defaultModel": "",
+  "packages": [
+    "git:github.com/jo-inc/pi-mem"
+  ],
+  "extensions": [],
+  "quietStartup": false,
+  "theme": "dark",
+  "hideThinkingBlock": true,
+  "defaultThinkingLevel": "minimal"
+}
