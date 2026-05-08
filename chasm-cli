@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Chasm CLI -- create, launch, and manage text adventure games."""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+XDG_DATA_HOME = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+CHASM_DATA = XDG_DATA_HOME / "chasm"
+TEMPLATE_DIR = CHASM_DATA / "template"
+GAMES_DIR = CHASM_DATA / "games"
+
+
+def die(msg: str) -> None:
+    print(f"Error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def print_help():
+    print("Usage: chasm  command  [options]")
+    print("")
+    print("Commands:")
+    print("  new GAME_NAME [--dir PATH]    Scaffold a new game workspace")
+    print("  play GAME_NAME                Launch a game (bootstraps on first run)")
+    print("  list                          List all games")
+    print("  --help                        Show this help text")
+    print("")
+    print("Examples:")
+    print("  chasm new sunken-quarter")
+    print("  chasm play sunken-quarter")
+    print("  chasm new milliways --dir ~/Games")
+    print("  chasm list")
+
+
+def cmd_new(args: argparse.Namespace) -> None:
+    name = args.name
+    if not name or not all(c.isalnum() or c in "_-" for c in name):
+        die("GAME_NAME must match ^[a-zA-Z0-9_-]+$")
+
+    if args.dir:
+        target = Path(args.dir).expanduser().resolve() / name
+    else:
+        target = GAMES_DIR / name
+
+    if target.exists() and any(target.iterdir()):
+        die(f"{target} already exists and is not empty.")
+
+    if not TEMPLATE_DIR.exists():
+        die(f"Template not found at {TEMPLATE_DIR}. Run the install script first.")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(TEMPLATE_DIR, target)
+    (target / "memory" / "daily").mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "-C", str(target), "init", "--quiet"], check=True)
+    subprocess.run(["git", "-C", str(target), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(target), "commit", "--quiet", "-m",
+                    f"[chasm] Scaffold game: {name}"], check=True)
+
+    print(f"Created {name} at {target}.")
+    print(f"Run 'chasm play {name}' to begin.")
+
+
+def is_uninitialised(world_md: Path) -> bool:
+    if not world_md.exists():
+        return True
+    text = world_md.read_text()
+    return "Your World" in text or "TODO" in text
+
+
+def cmd_play(args: argparse.Namespace) -> None:
+    name = args.name
+    target = None
+
+    if (GAMES_DIR / name).is_dir():
+        target = GAMES_DIR / name
+    elif Path(name).is_dir():
+        target = Path(name).resolve()
+    else:
+        die(f"Game '{name}' not found.")
+
+    world_md = target / "memory" / "WORLD.md"
+    if not world_md.exists():
+        die(f"Corrupt game -- no WORLD.md found in {target}")
+
+    if is_uninitialised(world_md):
+        os.environ["PI_CODING_AGENT_DIR"] = str(target)
+        os.environ["PI_MEMORY_DIR"] = str(target / "memory")
+        os.chdir(target)
+        subprocess.run([sys.executable, str(target / "bin" / "bootstrap")], check=False)
+        print("---")
+
+    os.environ["PI_CODING_AGENT_DIR"] = str(target)
+    os.environ["PI_MEMORY_DIR"] = str(target / "memory")
+    os.chdir(target)
+    os.execvp("pi", ["pi"] + args.extra)
+
+
+def cmd_list(_: argparse.Namespace) -> None:
+    if not GAMES_DIR.exists():
+        print("No games found. Create one with 'chasm new GAME_NAME'.")
+        return
+
+    print(f"{'Game':20}  {'Created':12}  Title")
+    print("-" * 60)
+
+    for game_path in sorted(GAMES_DIR.iterdir()):
+        if not game_path.is_dir():
+            continue
+        name = game_path.name
+        created = "no git"
+        if (game_path / ".git").is_dir():
+            try:
+                out = subprocess.check_output(
+                    ["git", "-C", str(game_path), "log", "--format=%as", "-1"],
+                    text=True, stderr=subprocess.DEVNULL
+                ).strip()
+                created = out if out else "unknown"
+            except subprocess.CalledProcessError:
+                pass
+        title = ""
+        world_md = game_path / "memory" / "WORLD.md"
+        if world_md.exists():
+            first = world_md.read_text().splitlines()[0] if world_md.read_text() else ""
+            title = first.lstrip("# ").strip() if first.startswith("#") else "(uninitialised)"
+        print(f"{name:20}  {created:12}  {title}")
+
+
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    subparsers = parser.add_subparsers(dest="command")
+
+    p_new = subparsers.add_parser("new")
+    p_new.add_argument("name")
+    p_new.add_argument("--dir", default="")
+
+    p_play = subparsers.add_parser("play")
+    p_play.add_argument("name")
+    p_play.add_argument("extra", nargs=argparse.REMAINDER, default=[])
+
+    subparsers.add_parser("list")
+
+    args = parser.parse_args()
+
+    if args.command is None:
+        print_help()
+        sys.exit(1)
+
+    if args.command == "new":
+        cmd_new(args)
+    elif args.command == "play":
+        cmd_play(args)
+    elif args.command == "list":
+        cmd_list(args)
+    else:
+        print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

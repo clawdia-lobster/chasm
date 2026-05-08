@@ -1,0 +1,12 @@
+{
+  "defaultProvider": "",
+  "defaultModel": "",
+  "packages": [
+    "git:github.com/jo-inc/pi-mem"
+  ],
+  "extensions": [
+    "extensions/chasm-ui.ts"
+  ],
+  "quietStartup": false,
+  "theme": "dark"
+}

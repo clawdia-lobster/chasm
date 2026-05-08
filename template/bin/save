@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Save game state — run from anywhere within the chasm project.
+# Usage: bash bin/save "[narrative] Description of what changed"
+
+set -e
+
+cd "$(dirname "$0")/../memory"
+git add -A >/dev/null 2>&1
+
+git commit --quiet -m "$*"
+echo "Saved."
