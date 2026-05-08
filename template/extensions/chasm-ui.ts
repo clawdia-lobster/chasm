@@ -1,9 +1,12 @@
 /**
- * Chasm UI — collapses tool output and shows what the narrator is doing.
+ * Chasm UI -- collapses tool output and shows what the narrator is doing.
  *
  * For debugging, every read/edit/write shows a brief notification
  * with the filename before the tool runs. Use Ctrl+O to expand
  * any individual tool and see its full output.
+ *
+ * TODO: Custom footer showing world name and player state.
+ *   See /pi/extensions/agent-indicator.ts for the setFooter pattern.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";

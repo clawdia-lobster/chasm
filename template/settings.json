@@ -8,5 +8,7 @@
     "extensions/chasm-ui.ts"
   ],
   "quietStartup": false,
-  "theme": "dark"
+  "theme": "dark",
+  "hideThinkingBlock": true,
+  "defaultThinkingLevel": "minimal"
 }
