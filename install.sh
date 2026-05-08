@@ -38,7 +38,7 @@ fi
 BIN_DIR="${PREFIX}/bin"
 SHARE_DIR="${PREFIX}/share/chasm"
 TEMPLATE_SRC="${SCRIPT_DIR}/template"
-CLI_SRC="${SCRIPT_DIR}/chasm-cli"
+CLI_SRC="${SCRIPT_DIR}/chasm"
 
 echo "Installing Chasm..."
 echo "  prefix:  ${PREFIX}"
@@ -86,8 +86,8 @@ fi
 
 # Copy CLI
 echo "Installing chasm CLI..."
-cp "$CLI_SRC" "${BIN_DIR}/chasm-cli"
-cp "${BIN_DIR}/chasm-cli" "${BIN_DIR}/chasm"
+cp "$CLI_SRC" "${BIN_DIR}/chasm"
+cp "${BIN_DIR}/chasm" "${BIN_DIR}/chasm"
 chmod +x "${BIN_DIR}/chasm"
 
 # Ensure bin is on PATH
