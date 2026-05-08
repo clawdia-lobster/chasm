@@ -1,0 +1,8 @@
+# Repo metadata
+tags
+tags.lock
+tags.temp
+*.egg-info/
+__pycache__/
+*.pyc
+.DS_Store
