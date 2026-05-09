@@ -44,6 +44,7 @@ export default function (pi: ExtensionAPI) {
     pi.on("tool_call", async (event) => {
         if (event.toolName === "write" || event.toolName === "edit") {
             persistedThisTurn = true;
+            turnCount = 0;
         }
     });
 
