@@ -52,7 +52,7 @@ function readWorldState(): WorldState {
             const text = fs.readFileSync(statePath, "utf-8");
             const get = (key: string): string => {
                 const match = text.match(new RegExp(`^-\\s+${key}:\\s*(.+)`, "m"));
-                return match ? match[1].trim().replace(/`/g, "") : "";
+                return match ? match[1].trim().replace(/`/g, "").replace(/\s+#.+$/, "") : "";
             };
 
             const location = get("current_place") || get("starting_place") || get("location");
