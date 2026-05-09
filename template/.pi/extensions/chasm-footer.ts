@@ -1,8 +1,8 @@
 /**
  * Chasm Footer — shows world name, player location, and game state.
  *
- * Line 1: 🎲 World Name • location
- * Line 2: day N · time · weather · inventory count · context% · model
+ * Line 1: 🎲 World Name • location          model • thinking
+ * Line 2: day N · time · weather · ⚔N · ↑in ↓out $cost   context%/window
  *
  * Reads WORLD.md and WORLD_STATE.md from PI_MEMORY_DIR on each render.
  * Falls back to "Chasm" / "unknown" if files are missing or uninitialised.
@@ -37,7 +37,6 @@ function readWorldState(): WorldState {
     if (!memDir) return defaults;
 
     try {
-        // Read world name from WORLD.md
         const worldPath = nodePath.join(memDir, "WORLD.md");
         if (fs.existsSync(worldPath)) {
             const text = fs.readFileSync(worldPath, "utf-8");
@@ -48,17 +47,12 @@ function readWorldState(): WorldState {
             }
         }
 
-        // Read state from WORLD_STATE.md
         const statePath = nodePath.join(memDir, "WORLD_STATE.md");
         if (fs.existsSync(statePath)) {
             const text = fs.readFileSync(statePath, "utf-8");
             const get = (key: string): string => {
                 const match = text.match(new RegExp(`^-\\s+${key}:\\s*(.+)`, "m"));
                 return match ? match[1].trim().replace(/`/g, "") : "";
-            };
-            const getRaw = (key: string): string => {
-                const match = text.match(new RegExp(`^-\\s+${key}:\\s*(.+)`, "m"));
-                return match ? match[1].trim() : "";
             };
 
             const location = get("current_place") || get("starting_place") || get("location");
@@ -73,7 +67,6 @@ function readWorldState(): WorldState {
             const weather = get("condition");
             if (weather) defaults.weather = weather;
 
-            // Count inventory items
             const invMatch = text.match(/inventory:\s*\n((?:\s+-\s+.+\n?)*)/);
             if (invMatch) {
                 defaults.inventoryCount = (invMatch[1].match(/^\s+-\s+/gm) || []).length;
@@ -131,22 +124,29 @@ export default function (pi: ExtensionAPI) {
                         contextStr = contextFmt;
                     }
 
-                    // Line 1: 🎲 World Name • location
+                    // Line 1: 🎲 World Name • location          model • thinking
                     const dice = "🎲";
-                    const worldDisplay = theme.fg("accent", `${dice} ${state.worldName}`);
-                    const locDisplay = state.location !== "unknown"
-                        ? theme.fg("dim", ` • ${state.location}`)
-                        : "";
-                    const line1 = truncateToWidth(worldDisplay + locDisplay, width);
+                    const leftPlain = `${dice} ${state.worldName}` + (state.location !== "unknown" ? ` • ${state.location}` : "");
+                    const leftStr = theme.fg("accent", `${dice} ${state.worldName}`)
+                        + (state.location !== "unknown" ? theme.fg("dim", ` • ${state.location}`) : "");
 
-                    // Line 2: day · time · weather · inv · context · model
+                    let rightPlain = model;
+                    if (ctx.model?.reasoning) {
+                        const level = pi.getThinkingLevel();
+                        rightPlain = level === "off" ? `${model} · no thinking` : `${model} · ${level}`;
+                    }
+                    const rightStr = theme.fg("dim", rightPlain);
+
+                    const pad1 = Math.max(2, width - visibleWidth(leftPlain) - visibleWidth(rightPlain));
+                    const line1 = truncateToWidth(leftStr + " ".repeat(pad1) + rightStr, width);
+
+                    // Line 2: day · time · weather · ⚔N · ↑in ↓out $cost   context
                     const parts: string[] = [];
                     parts.push(`day ${state.day}`);
                     if (state.timeOfDay) parts.push(state.timeOfDay);
                     if (state.weather) parts.push(state.weather);
                     if (state.inventoryCount > 0) parts.push(`⚔${state.inventoryCount}`);
 
-                    // Token stats
                     if (input || output) {
                         const tokenParts: string[] = [];
                         if (input) tokenParts.push(`↑${fmt(input)}`);
@@ -155,19 +155,8 @@ export default function (pi: ExtensionAPI) {
                         parts.push(tokenParts.join(" "));
                     }
 
-                    const leftPlain = parts.join(" · ");
-                    const leftStr = theme.fg("dim", leftPlain) + "  " + contextStr;
-
-                    // Right side: model
-                    let rightSide = model;
-                    if (ctx.model?.reasoning) {
-                        const level = pi.getThinkingLevel();
-                        rightSide = level === "off" ? `${model} · no thinking` : `${model} · ${level}`;
-                    }
-                    const rightStr = theme.fg("dim", rightSide);
-
-                    const padding = Math.max(2, width - visibleWidth(leftPlain) - visibleWidth(rightSide) - 3);
-                    const line2 = truncateToWidth(leftStr + " ".repeat(padding) + rightStr, width);
+                    const line2Plain = parts.join(" · ");
+                    const line2 = truncateToWidth(theme.fg("dim", line2Plain) + "  " + contextStr, width);
 
                     return [line1, line2];
                 },
