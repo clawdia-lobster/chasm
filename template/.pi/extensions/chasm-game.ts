@@ -50,7 +50,7 @@ export default function (pi: ExtensionAPI) {
     // --- Nudge if model hasn't persisted state recently ---
     pi.on("agent_end", async (_event, ctx) => {
         // Check every 5 turns whether state was persisted
-        if (turnCount % 5 !== 0) return;
+        if (turnCount % 10 !== 0) return;
         if (persistedThisTurn) return;
 
         pi.sendUserMessage(
