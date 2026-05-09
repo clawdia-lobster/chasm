@@ -18,23 +18,19 @@ Requires Node.js 18+, npm, git, and Python 3.
 
 **Quick install (one-liner):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/atisharma/chasm/main/web-install.sh | bash
+curl -sSL https://chasm.run/web-install.sh | bash
 ```
 
 **Or clone manually:**
 ```bash
-git clone https://github.com/clawdia-lobster/chasm.git
+git clone https://github.com/atisharma/chasm.git
 cd chasm
 ./install.sh --local
 ```
 
 If `pi` is not on your PATH, the installer will install it via npm.
 
-**Before playing:** configure a model in pi:
-
-```bash
-pi /login
-```
+**When starting** you'll need to configure a model by typing `/login`.
 
 Chasm requires a model with tool-use support (function calling). Good choices
 as of 2026: Kimi K2.5, Mistral Medium 3.5, Sonnet 4.5 via OpenRouter. You can
