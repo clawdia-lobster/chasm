@@ -80,6 +80,16 @@ else
     die "Template not found at ${TEMPLATE_SRC}"
 fi
 
+# Create user gaming config if it doesn't exist
+USER_CONFIG="${SHARE_DIR}/models.json"
+TEMPLATE_CONFIG="${SHARE_DIR}/template/models.json"
+if [[ ! -f "$USER_CONFIG" ]]; then
+    echo "Creating user gaming config..."
+    cp "$TEMPLATE_CONFIG" "$USER_CONFIG"
+else
+    echo "User gaming config already exists."
+fi
+
 # Copy CLI
 echo "Installing chasm CLI..."
 cp "$CLI_SRC" "${BIN_DIR}/chasm"
@@ -120,6 +130,6 @@ echo "  chasm list              -- list all games"
 echo ""
 echo "Before playing:"
 echo "  1. Configure a model provider in pi:  pi /login"
-echo "  2. Edit gaming models (optional):     ${SHARE_DIR}/template/models.json"
+echo "  2. Edit gaming models (optional):     ${USER_CONFIG}"
 echo ""
 echo "Then run 'chasm play GAME_NAME' to begin."

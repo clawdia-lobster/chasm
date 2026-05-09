@@ -20,9 +20,9 @@ def main():
 
     title = prompt("Name of your world")
     setting = prompt("Describe the setting in one or two sentences")
-    genre = prompt("Primary genre (e.g. historical-fantasy, sci-fi, horror)")
-    tone = prompt("Tone (e.g. grim-wry, epic, noir, wonder)")
-    rule = prompt("One unique rule of this world")
+    genre = prompt("Primary genre (e.g. historical-fantasy, sci-fi, horror; optional)")
+    tone = prompt("Tone (e.g. grim-wry, epic, noir, wonder; optional)")
+    rule = prompt("One unique rule of this world (optional)")
     starting_place = prompt("Name the starting location")
 
     memory_dir = Path(__file__).resolve().parent.parent / "memory"
