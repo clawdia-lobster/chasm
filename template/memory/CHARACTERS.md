@@ -95,6 +95,20 @@ When spawning a new character:
 4. Give them **urgency** — a reason to be doing something now
 5. Write `motivation` as `{Archetype} — {specific goal}`
 
+### When to Write a Character File
+
+Write a character file when:
+- The player **encounters** a named character who may reappear
+- A character has **inventory, objectives, or secrets** worth tracking
+- A character **moves independently** — they need a location to track
+
+Don't write a character file when:
+- A character is **mentioned but not present** — note them in the place description or an event instead
+- A character is **generic/background** ("the barman", "a guard") — they don't need a file unless they become recurring
+- The **player character** has not yet declared a name or identity — until then, describe them in second person only (see Amnesia Bootstrap above)
+
+When in doubt, write the file. It's easier to delete a redundant file than to reconstruct a character from scattered events.
+
 ## Character Archetypes
 
 Use one as baseline, then complicate:

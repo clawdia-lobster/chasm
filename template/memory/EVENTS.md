@@ -2,13 +2,15 @@
 
 ## Overview
 
-Events are **append-only markdown files** in `$PI_MEMORY_DIR/events/*.md`. They record things that happened. They are **logs, not state** — write once, never edit. The filename is a timestamp + slug: `YYYY-MM-DD_HH-MM-SS_brief-slug.md`.
+Events are **append-only markdown files** in `$PI_MEMORY_DIR/events/*.md`. They record things that happened. They are **logs, not state** — write once, never edit. The filename is a **real-world timestamp** + slug: `YYYY-MM-DD_HH-MM-SS_brief-slug.md`. This is for ordering and deduplication — it is not the in-game date.
+
+The frontmatter `time` field should use **in-game time** (the day/season from `WORLD_STATE.md`), not the real-world clock. Example: if the game is set in 1979 and it's day 3, morning, the frontmatter might read `time: "day 3, morning"`.
 
 ## File Format
 
 ```markdown
 ---
-time: "2026-05-07T14:30:00Z"
+time: "day 1, morning"
 place: "The Forge, Anchor Street"
 coords: {x: 0, y: 0}
 characters:
