@@ -26,6 +26,8 @@ def main():
     starting_place = prompt("Name the starting location")
 
     memory_dir = Path(__file__).resolve().parent.parent / "memory"
+    places_dir = memory_dir / "places"
+    places_dir.mkdir(parents=True, exist_ok=True)
 
     world_md = textwrap.dedent(f"""\
         # {title}
@@ -109,4 +111,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"\nBootstrap error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

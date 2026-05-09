@@ -100,7 +100,9 @@ def cmd_play(args: argparse.Namespace) -> None:
         os.environ["PI_CODING_AGENT_DIR"] = str(target)
         os.environ["PI_MEMORY_DIR"] = str(target / "memory")
         os.chdir(target)
-        subprocess.run([sys.executable, str(target / "bin" / "bootstrap")], check=False)
+        result = subprocess.run([sys.executable, str(target / "bin" / "bootstrap")], check=False)
+        if result.returncode != 0:
+            die(f"Bootstrap failed with exit code {result.returncode}")
         print("---")
 
     os.environ["PI_CODING_AGENT_DIR"] = str(target)
