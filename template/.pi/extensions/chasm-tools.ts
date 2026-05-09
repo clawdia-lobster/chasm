@@ -11,12 +11,68 @@
  * Based on the built-in-tool-renderer.ts example from pi.
  */
 
-import type { EditToolDetails, ExtensionAPI, ReadToolDetails } from "@earendil-works/pi-coding-agent";
-import { createEditTool, createReadTool, createWriteTool } from "@earendil-works/pi-coding-agent";
+import type { BashToolDetails, EditToolDetails, ExtensionAPI, ReadToolDetails } from "@earendil-works/pi-coding-agent";
+import { createBashTool, createEditTool, createReadTool, createWriteTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 
 export default function (pi: ExtensionAPI) {
     const cwd = process.cwd();
+
+    // --- Bash tool: command + exit code ---
+    const originalBash = createBashTool(cwd);
+    pi.registerTool({
+        name: "bash",
+        label: "bash",
+        description: originalBash.description,
+        parameters: originalBash.parameters,
+
+        async execute(toolCallId, params, signal, onUpdate) {
+            return originalBash.execute(toolCallId, params, signal, onUpdate);
+        },
+
+        renderCall(args, theme) {
+            let text = theme.fg("toolTitle", theme.bold("$ "));
+            const cmd = args.command.length > 80 ? `${args.command.slice(0, 77)}...` : args.command;
+            text += theme.fg("muted", cmd);
+            return new Text(text, 0, 0);
+        },
+
+        renderResult(result, { expanded, isPartial }, theme) {
+            if (isPartial) return new Text(theme.fg("dim", "running…"), 0, 0);
+
+            const details = result.details as BashToolDetails | undefined;
+            const content = result.content[0];
+            const output = content?.type === "text" ? content.text : "";
+
+            const exitMatch = output.match(/exit code: (\d+)/);
+            const exitCode = exitMatch ? parseInt(exitMatch[1], 10) : null;
+            const lineCount = output.split("\n").filter((l: string) => l.trim()).length;
+
+            let text = "";
+            if (exitCode === 0 || exitCode === null) {
+                text += theme.fg("dim", `done`);
+            } else {
+                text += theme.fg("error", `exit ${exitCode}`);
+            }
+            text += theme.fg("dim", ` (${lineCount} lines)`);
+
+            if (details?.truncation?.truncated) {
+                text += theme.fg("dim", " [truncated]");
+            }
+
+            if (expanded) {
+                const lines = output.split("\n").slice(0, 20);
+                for (const line of lines) {
+                    text += `\n${theme.fg("dim", line)}`;
+                }
+                if (output.split("\n").length > 20) {
+                    text += `\n${theme.fg("dim", `… ${output.split("\n").length - 20} more`)}`;
+                }
+            }
+
+            return new Text(text, 0, 0);
+        },
+    });
 
     // --- Read tool: path + line count ---
     const originalRead = createReadTool(cwd);
