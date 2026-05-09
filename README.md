@@ -31,8 +31,11 @@ pi /login
 ```
 
 Chasm requires a model with tool-use support (function calling). Good choices
-as of 2026: Kimi K2.5, Mistral Medium 3.5, Sonnet 4.5 via OpenRouter. You can configure local models
-via vLLM. Qwen 3.6 27b, Gemma 4 work fine.
+as of 2026: Kimi K2.5, Mistral Medium 3.5, Sonnet 4.5 via OpenRouter. You can
+configure local models via vLLM, for which you'll have to edit `models.json`
+(see the `pi` [documentation to set up
+models](https://pi.dev/docs/latest/providers)). Qwen 3.6 27b, Gemma 4 work
+fine.
 
 During play, switch models with **Ctrl+L**.
 

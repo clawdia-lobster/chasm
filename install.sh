@@ -87,10 +87,27 @@ chmod +x "${BIN_DIR}/chasm"
 
 # Ensure bin is on PATH
 if [[ ":${PATH}:" != *":${BIN_DIR}:"* ]]; then
+    # Detect the user's shell profile file
+    profile_file=""
+    case "${SHELL:-}" in
+        */zsh)  profile_file="${HOME}/.zshrc" ;;
+        */bash) profile_file="${HOME}/.bashrc" ;;
+        *)      profile_file="${HOME}/.profile" ;;
+    esac
+
     echo ""
-    echo "WARNING: ${BIN_DIR} is not on your PATH."
-    echo "Add this to your shell profile (e.g. ~/.bashrc):"
-    echo "  export PATH=\"${BIN_DIR}:\${PATH}\""
+    echo "${BIN_DIR} is not on your PATH."
+    read -r -p "Add it to ${profile_file}? [Y/n] " answer
+    case "${answer,,}" in
+        n|no)
+            echo "Skipped. Add this line to your shell profile manually:"
+            echo "  export PATH=\"${BIN_DIR}:\${PATH}\""
+            ;;
+        *)
+            echo "export PATH=\"${BIN_DIR}:\${PATH}\"" >> "${profile_file}"
+            echo "Added to ${profile_file}. Run 'source ${profile_file}' or open a new terminal."
+            ;;
+    esac
 fi
 
 echo ""
