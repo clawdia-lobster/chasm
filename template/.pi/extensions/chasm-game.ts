@@ -1,12 +1,14 @@
 /**
- * Chasm Game Tools — save and sync commands for game state discipline.
+ * Chasm Game Tools — auto-save, save tool, and sync command.
  *
- * save: registered as both a tool (LLM calls it) and a /save command (user
- *       invokes it). The tool description reminds the model to persist state
- *       before saving, establishing the pattern from turn 1.
+ * Auto-save: commits any changed files after every agent turn. The model
+ * just needs to write state files — the git commit is automatic.
  *
- * sync: /sync command for the user. Sends a steer message telling the model
- *       to re-read key state files and persist any pending changes.
+ * save tool: for the model to checkpoint with a descriptive message.
+ * Auto-save uses a generic message; the save tool lets the model be specific.
+ *
+ * /save command: user-facing, forces a commit with a reminder to persist first.
+ * /sync command: user-facing, forces the narrator to re-read state and persist.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -16,19 +18,75 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+async function gitCommit(cwd: string, message: string): Promise<string> {
+    try {
+        await execFileAsync("git", ["-C", cwd, "add", "-A"], { timeout: 5000 });
+        await execFileAsync("git", ["-C", cwd, "commit", "--quiet", "-m", message], { timeout: 5000 });
+        return message;
+    } catch (err: any) {
+        if (err?.stderr?.includes("nothing to commit")) {
+            return "no changes";
+        }
+        throw err;
+    }
+}
+
 export default function (pi: ExtensionAPI) {
-    // --- save tool (LLM calls this) ---
+    // Track whether the model persisted any state this turn
+    let persistedThisTurn = false;
+
+    pi.on("turn_start", async () => {
+        persistedThisTurn = false;
+    });
+
+    pi.on("tool_call", async (event) => {
+        if (event.toolName === "write" || event.toolName === "edit") {
+            persistedThisTurn = true;
+        }
+    });
+
+    // --- Nudge if model didn't persist state this turn ---
+    pi.on("agent_end", async (_event, ctx) => {
+        if (!persistedThisTurn) {
+            // Don't nudge on the very first turn (bootstrapping)
+            const entries = ctx.sessionManager.getBranch();
+            const userTurns = entries.filter(e => e.type === "message" && e.message.role === "user");
+            if (userTurns.length > 1) {
+                pi.sendUserMessage(
+                    "You didn't persist any state this turn. Check: did the player move? " +
+                    "Did an NPC change? Did time pass? If anything changed, write it to the " +
+                    "relevant files now, then continue the story without comment.",
+                    { deliverAs: "followUp" },
+                );
+            }
+        }
+    });
+    // --- Auto-save after every agent turn ---
+    pi.on("agent_end", async (_event, ctx) => {
+        const cwd = process.env.PI_MEMORY_DIR || process.cwd();
+        try {
+            const result = await gitCommit(cwd, "[auto] turn checkpoint");
+            if (result !== "no changes") {
+                ctx.ui.notify("💾 saved", "info");
+            }
+        } catch {
+            // Silent — don't disrupt the player for a git error
+        }
+    });
+
+    // --- save tool (LLM calls this for a descriptive commit) ---
     pi.registerTool({
         name: "save",
         label: "save",
         description:
-            "Checkpoint game state with a git commit. " +
+            "Checkpoint game state with a descriptive git commit. " +
+            "Auto-save already commits after every turn, so this is optional — " +
+            "use it when you want a meaningful commit message for a significant moment. " +
             "BEFORE saving, ensure all changes are persisted to disk: " +
             "update WORLD_STATE.md (player location, time, conditions), " +
             "create any new place/character/item files, " +
             "update existing entity files for changes, " +
-            "create event files for significant occurrences. " +
-            "If you haven't written state files this turn, do that first, then save.",
+            "create event files for significant occurrences.",
         parameters: {
             type: "object",
             properties: {
@@ -42,17 +100,11 @@ export default function (pi: ExtensionAPI) {
         },
         async execute(_toolCallId, params, _signal) {
             const cwd = process.env.PI_MEMORY_DIR || process.cwd();
-            try {
-                await execFileAsync("git", ["-C", cwd, "add", "-A"], { timeout: 5000 });
-                await execFileAsync("git", ["-C", cwd, "commit", "--quiet", "-m", params.message], { timeout: 5000 });
-            } catch (err: any) {
-                // git commit fails if nothing to commit — that's fine
-                if (err?.stderr?.includes("nothing to commit")) {
-                    return { content: [{ type: "text" as const, text: "Nothing to save — no changes since last commit." }], details: {} };
-                }
-                throw err;
-            }
-            return { content: [{ type: "text" as const, text: `Saved: ${params.message}` }], details: {} };
+            const result = await gitCommit(cwd, params.message);
+            return {
+                content: [{ type: "text" as const, text: result === "no changes" ? "Nothing to save." : `Saved: ${params.message}` }],
+                details: {},
+            };
         },
         renderCall(args, theme) {
             return new Text(theme.fg("toolTitle", theme.bold("save ")) + theme.fg("dim", args.message.slice(0, 60)), 0, 0);
@@ -67,11 +119,16 @@ export default function (pi: ExtensionAPI) {
     pi.registerCommand("save", {
         description: "Save game state (reminds narrator to persist changes first)",
         handler: async (_args, ctx) => {
-            ctx.ui.notify("Saving — narrator should persist state first", "info");
+            const cwd = process.env.PI_MEMORY_DIR || process.cwd();
+            try {
+                const result = await gitCommit(cwd, "[player] manual save");
+                ctx.ui.notify(result === "no changes" ? "Nothing to save." : "💾 saved", "info");
+            } catch {
+                ctx.ui.notify("Save failed", "error");
+            }
             pi.sendUserMessage(
-                "The player wants to save. Before committing, check that all state is current: " +
-                "WORLD_STATE.md, current place, player character, any changed entities. " +
-                "Write any pending changes, then call the save tool.",
+                "The player wants to save. Persist any pending changes to state files now, " +
+                "then continue the story without comment.",
                 { deliverAs: "steer" },
             );
         },
@@ -81,11 +138,11 @@ export default function (pi: ExtensionAPI) {
     pi.registerCommand("sync", {
         description: "Force narrator to re-read and persist state (use when things feel stale)",
         handler: async (_args, ctx) => {
-            ctx.ui.notify("Syncing state — narrator will re-read key files", "info");
+            ctx.ui.notify("Syncing state…", "info");
             pi.sendUserMessage(
                 "Sync state now: re-read WORLD_STATE.md, your current place file, and your " +
                 "character file. If any of these are out of date, update them. If you've made " +
-                "changes this turn that aren't persisted, write them now. Then save.",
+                "changes this turn that aren't persisted, write them now. Then continue the story without comment.",
                 { deliverAs: "steer" },
             );
         },
