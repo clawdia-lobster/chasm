@@ -14,8 +14,14 @@ architecture).
 
 ## Install
 
-Requires **Node.js 18+**, **npm**, **git**, and **Python 3**.
+Requires Node.js 18+, npm, git, and Python 3.
 
+**Quick install (one-liner):**
+```bash
+curl -sSL https://raw.githubusercontent.com/atisharma/chasm/main/web-install.sh | bash
+```
+
+**Or clone manually:**
 ```bash
 git clone https://github.com/clawdia-lobster/chasm.git
 cd chasm
@@ -35,7 +41,7 @@ as of 2026: Kimi K2.5, Mistral Medium 3.5, Sonnet 4.5 via OpenRouter. You can
 configure local models via vLLM, for which you'll have to edit `models.json`
 (see the `pi` [documentation to set up
 models](https://pi.dev/docs/latest/providers)). Qwen 3.6 27b, Gemma 4 work
-fine.
+well.
 
 During play, switch models with **Ctrl+L**.
 
@@ -64,10 +70,11 @@ commands and responds in second-person prose.
 
 | Command | What it does |
 |----------|-------------|
-| `/save` | Save game state. Reminds the narrator to persist any pending changes first. |
-| `/sync` | Force the narrator to re-read key state files and persist changes. Use when the story feels stale or inconsistent. |
-| `Ctrl+L` | Switch models mid-session. |
-| `Ctrl+O` | Expand/collapse a tool call to see full output (file contents, command output). |
+| `Ctrl+L` | Switch models mid-session |
+| `Ctrl+O` | Expand/collapse tool output |
+| `/save` | Force a save of the game state |
+| `/sync` | Force the narrator to re-read and persist state (use if the model forgets) |
+| `/compact` | Compact the context (use if the model's beginning to forget its instructions, or getting confused) |
 
 ## How It Works (Briefly)
 
@@ -84,6 +91,13 @@ runs only when `WORLD.md` is uninitialised.
 
 **Permission denied on `chasm`:** Ensure `~/.local/bin` is on your PATH, or use
 the full path.
+
+### Disclaimer
+
+There is no good way to moderate the actions and writing of language models.
+Chasm could offend you, embarrass you in front of your mother-in law, execute
+`rm -rf ~` or even execute your kitten. You must check prompts that other
+people provide for such instructions. No guarantees thereof are offered.
 
 ## License
 
