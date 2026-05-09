@@ -53,6 +53,18 @@ and starting place. The narrator then drops you into the world.
 
 Resume later: `chasm play sunken-quarter`.
 
+## In-Game Commands
+
+Type natural language to act in the world. The narrator interprets your
+commands and responds in second-person prose.
+
+| Command | What it does |
+|----------|-------------|
+| `/save` | Save game state. Reminds the narrator to persist any pending changes first. |
+| `/sync` | Force the narrator to re-read key state files and persist changes. Use when the story feels stale or inconsistent. |
+| `Ctrl+L` | Switch models mid-session. |
+| `Ctrl+O` | Expand/collapse a tool call to see full output (file contents, command output). |
+
 ## How It Works (Briefly)
 
 A Chasm world is a **git repo** of markdown files. The narrator reads state,
