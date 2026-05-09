@@ -77,7 +77,17 @@ The `memory_*` tools are provided by the pi-mem extension. They are **not** for 
 - **Granularity.** `memory_write(target='long_term')` writes to `MEMORY.md`, a single agent-level file. World state is distributed across dozens of files.
 - **Separation of concerns.** `memory_write` is for the *narrator's* memory (what you'd jot on scrap paper between sessions). `write`/`edit` is for the *world's* reality (what happened in the game).
 
-Use `memory_search` to discover cross-references. Mutate state with `read`/`edit`/`write`.
+### When to use `memory_search`
+
+Always search before reading a file if you're unsure whether it exists:
+
+1. **Movement/exits.** When the player moves through an exit listed in the current place, search for the target place before reading it. If it doesn't exist, create it.
+2. **Player queries.** "Have I met anyone named X?", "What do I know about Y?", "That guy from the pub".
+3. **Consistency checks.** Before introducing a character/place/item, search to ensure it's new or to reference existing mentions.
+4. **Past events.** When the player references "earlier", "before", or "last time we met".
+5. **Cross-references.** Find all mentions of an entity to check for relationships, connections, or contradictions.
+
+Search first, then `read` the specific files you need. Mutate with `edit`/`write`.
 
 ## Game Loop
 
