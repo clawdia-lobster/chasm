@@ -56,6 +56,14 @@ def cmd_new(args: argparse.Namespace) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(TEMPLATE_DIR, target)
     (target / "memory" / "daily").mkdir(parents=True, exist_ok=True)
+
+    # Symlink models.json from the installed template so games inherit
+    # the user's gaming model config. User edits template/models.json once.
+    template_models = TEMPLATE_DIR / "models.json"
+    if template_models.exists():
+        (target / "models.json").unlink(missing_ok=True)
+        (target / "models.json").symlink_to(template_models)
+
     subprocess.run(["git", "-C", str(target), "init", "--quiet"], check=True)
     subprocess.run(["git", "-C", str(target), "add", "-A"], check=True)
     subprocess.run(["git", "-C", str(target), "commit", "--quiet", "-m",
