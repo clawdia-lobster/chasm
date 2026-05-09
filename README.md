@@ -18,7 +18,7 @@ Requires Node.js 18+, npm, git, and Python 3.
 
 **Quick install (one-liner):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/atisharma/chasm/main/web-install.sh | bash
+curl -sSL https://chasm.run/web-install.sh | bash
 ```
 
 **Or clone manually:**
