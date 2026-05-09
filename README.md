@@ -48,6 +48,10 @@ chasm new sunken-quarter
 chasm play sunken-quarter
 ```
 
+Game names must use only letters, digits, hyphens, and underscores (no
+spaces). Use kebab-case (`sunken-quarter`) or snake_case
+(`sunken_quarter`).
+
 First launch triggers a short Q&A — title, setting, genre, tone, a unique rule,
 and starting place. The narrator then drops you into the world.
 

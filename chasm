@@ -25,6 +25,7 @@ def print_help():
     print("")
     print("Commands:")
     print("  new GAME_NAME [--dir PATH]    Scaffold a new game workspace")
+    print("                                 (GAME_NAME: letters, digits, hyphens, underscores only)")
     print("  play GAME_NAME                Launch a game (bootstraps on first run)")
     print("  delete GAME_NAME [--force]    Destroy a game workspace")
     print("  list                          List all games")
@@ -40,7 +41,7 @@ def print_help():
 def cmd_new(args: argparse.Namespace) -> None:
     name = args.name
     if not name or not all(c.isalnum() or c in "_-" for c in name):
-        die("GAME_NAME must match ^[a-zA-Z0-9_-]+$")
+        die("GAME_NAME must contain only letters, digits, hyphens, or underscores (no spaces). Try: london-is-calling")
 
     if args.dir:
         target = Path(args.dir).expanduser().resolve() / name
@@ -185,7 +186,16 @@ def main():
 
     subparsers.add_parser("list")
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        # argparse exits on error; give a helpful hint for common mistakes
+        if e.code != 0 and len(sys.argv) > 1 and sys.argv[1] == "new" and len(sys.argv) > 2:
+            if " " in sys.argv[2] or len(sys.argv) > 3:
+                print("\nHint: Use quotes for multi-word game names.", file=sys.stderr)
+                print("  chasm new \"London is calling\"", file=sys.stderr)
+                print("Or use hyphens: chasm new london-is-calling", file=sys.stderr)
+        sys.exit(1)
 
     if args.command is None:
         print_help()
