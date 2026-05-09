@@ -170,18 +170,19 @@ export default function (pi: ExtensionAPI) {
                         if (cost) tokenParts.push(`$${cost.toFixed(3)}`);
                         right2Plain = tokenParts.join(" ");
                     }
-                    const right2Str = theme.fg("dim", right2Plain);
+                    const right2FullPlain = (right2Plain ? right2Plain + "  " : "") + contextFmt;
+                    const right2FullStr = (right2Plain ? theme.fg("dim", right2Plain) + "  " : "") + contextStr;
 
                     // Ellipsize left if it encroaches on right
-                    const right2Width = visibleWidth(right2Plain) + (right2Plain ? 2 : 0) + visibleWidth(contextFmt) + 2;
-                    const left2Budget = width - right2Width;
+                    const right2Width = visibleWidth(right2FullPlain);
+                    const left2Budget = width - right2Width - 2; // 2 for minimum padding
                     const left2Plain = statePlain.length > left2Budget
                         ? statePlain.slice(0, Math.max(0, left2Budget - 1)) + "…"
                         : statePlain;
                     const left2Str = theme.fg("dim", left2Plain);
 
-                    const spacer = right2Plain ? "  " : "";
-                    const line2 = truncateToWidth(left2Str + spacer + right2Str + "  " + contextStr, width);
+                    const pad2 = Math.max(2, width - visibleWidth(left2Plain) - right2Width);
+                    const line2 = truncateToWidth(left2Str + " ".repeat(pad2) + right2FullStr, width);
 
                     return [line1, line2];
                 },
