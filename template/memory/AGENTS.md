@@ -81,6 +81,8 @@ Use `memory_search` to discover cross-references. Mutate state with `read`/`edit
 
 ## Game Loop
 
+Every turn follows this sequence **without exception**:
+
 ```
 1. Read player command
 2. Load WORLD_STATE.md; check player.character pointer
@@ -90,9 +92,18 @@ Use `memory_search` to discover cross-references. Mutate state with `read`/`edit
 6. Determine outcome (success, failure, partial)
 7. Write narrative response
 8. If player provided a name or self-description → create character file, update pointer
-9. Update state files for any changes
-10. **Save state with the save script:** `bash bin/save "[tag] Brief description of what changed"`. Never call `git add` or `git commit` directly.
+9. **Persist all changes.** After every turn — no exceptions — check what changed and write it:
+   - Player moved? → update character location + new place exits if discovered
+   - New place visited or revealed? → create place file
+   - NPC spoke or acted? → update character file (emotions, memories, location)
+   - Item gained/lost/used? → update item file or inventory
+   - Time or weather shifted? → update WORLD_STATE.md
+   - Something significant happened? → create event file
+   - Anything else changed? → update the relevant file
+10. **Save:** `bash bin/save "[tag] Brief description of what changed"`. Never call `git add` or `git commit` directly.
 ```
+
+**Rule: steps 9 and 10 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
 
 ## Player Identity (Amnesia Bootstrap)
 
