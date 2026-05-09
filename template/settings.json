@@ -5,7 +5,8 @@
     "git:github.com/jo-inc/pi-mem"
   ],
   "extensions": [],
-  "quietStartup": false,
+  "quietStartup": true,
+  "enableInstallTelemetry": false,
   "theme": "dark",
   "hideThinkingBlock": true,
   "defaultThinkingLevel": "minimal"
