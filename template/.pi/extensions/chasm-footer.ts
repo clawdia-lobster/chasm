@@ -66,8 +66,12 @@ function readWorldState(): WorldState {
             const timeOfDay = get("time_of_day");
             if (timeOfDay) defaults.timeOfDay = timeOfDay;
 
-            const weather = get("condition");
-            if (weather) defaults.weather = weather;
+            // Weather condition (from ## Weather section, not player)
+            const weatherSection = text.match(/## Weather\s*\n([\s\S]*?)(?=## |$)/);
+            if (weatherSection) {
+                const wMatch = weatherSection[1].match(/^-\s+condition:\s*(.+)/m);
+                if (wMatch) defaults.weather = wMatch[1].trim().replace(/`/g, "").replace(/\s+#.+$/, "");
+            }
 
             // Player condition (from ## Player section, not weather)
             const playerSection = text.match(/## Player\s*\n([\s\S]*?)(?=## |$)/);

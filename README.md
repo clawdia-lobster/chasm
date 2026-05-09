@@ -48,10 +48,26 @@ chasm new sunken-quarter
 chasm play sunken-quarter
 ```
 
+Game names must use only letters, digits, hyphens, and underscores (no
+spaces). Use kebab-case (`sunken-quarter`) or snake_case
+(`sunken_quarter`).
+
 First launch triggers a short Q&A — title, setting, genre, tone, a unique rule,
 and starting place. The narrator then drops you into the world.
 
 Resume later: `chasm play sunken-quarter`.
+
+## In-Game Commands
+
+Type natural language to act in the world. The narrator interprets your
+commands and responds in second-person prose.
+
+| Command | What it does |
+|----------|-------------|
+| `/save` | Save game state. Reminds the narrator to persist any pending changes first. |
+| `/sync` | Force the narrator to re-read key state files and persist changes. Use when the story feels stale or inconsistent. |
+| `Ctrl+L` | Switch models mid-session. |
+| `Ctrl+O` | Expand/collapse a tool call to see full output (file contents, command output). |
 
 ## How It Works (Briefly)
 
