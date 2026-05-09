@@ -105,6 +105,15 @@ Every turn follows this sequence **without exception**:
 
 **Rule: steps 9 and 10 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
 
+### Periodic State Verification
+
+Every **5 turns** (or whenever you feel uncertain about the current state), re-read the key files before proceeding:
+1. `WORLD_STATE.md` — confirm player location, time, conditions
+2. Current place file — confirm you're describing the right scene
+3. Player character file (if it exists) — confirm inventory and status
+
+This prevents drift between your mental model and the on-disk state. It is not optional — do it at least every 5 turns.
+
 ## Player Identity (Amnesia Bootstrap)
 
 The player begins with no memory of who they are. `WORLD_STATE.md` points to `player.character: null`.
