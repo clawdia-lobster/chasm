@@ -20,6 +20,7 @@ interface WorldState {
     day: string;
     timeOfDay: string;
     weather: string;
+    playerCondition: string;
     inventoryCount: number;
 }
 
@@ -31,6 +32,7 @@ function readWorldState(): WorldState {
         day: "1",
         timeOfDay: "",
         weather: "",
+        playerCondition: "",
         inventoryCount: 0,
     };
 
@@ -66,6 +68,13 @@ function readWorldState(): WorldState {
 
             const weather = get("condition");
             if (weather) defaults.weather = weather;
+
+            // Player condition (from ## Player section, not weather)
+            const playerSection = text.match(/## Player\s*\n([\s\S]*?)(?=## |$)/);
+            if (playerSection) {
+                const pcMatch = playerSection[1].match(/^-\s+condition:\s*(.+)/m);
+                if (pcMatch) defaults.playerCondition = pcMatch[1].trim().replace(/`/g, "").replace(/\s+#.+$/, "");
+            }
 
             const invMatch = text.match(/inventory:\s*\n((?:\s+-\s+.+\n?)*)/);
             if (invMatch) {
@@ -140,23 +149,39 @@ export default function (pi: ExtensionAPI) {
                     const pad1 = Math.max(2, width - visibleWidth(leftPlain) - visibleWidth(rightPlain));
                     const line1 = truncateToWidth(leftStr + " ".repeat(pad1) + rightStr, width);
 
-                    // Line 2: day · time · weather · ⚔N · ↑in ↓out $cost   context
-                    const parts: string[] = [];
-                    parts.push(`day ${state.day}`);
-                    if (state.timeOfDay) parts.push(state.timeOfDay);
-                    if (state.weather) parts.push(state.weather);
-                    if (state.inventoryCount > 0) parts.push(`⚔${state.inventoryCount}`);
+                    // Line 2: day · time · weather · ⚔N · condition   ↑↓$  context%
+                    const stateParts: string[] = [];
+                    stateParts.push(`day ${state.day}`);
+                    if (state.timeOfDay) stateParts.push(state.timeOfDay);
+                    if (state.weather) stateParts.push(state.weather);
+                    if (state.inventoryCount > 0) stateParts.push(`⚔${state.inventoryCount}`);
 
+                    if (state.playerCondition && state.playerCondition !== "normal") stateParts.push(state.playerCondition);
+
+                    const statePlain = stateParts.join(" · ");
+                    const stateStr = theme.fg("dim", statePlain);
+
+                    // Right side: token stats + context
+                    let right2Plain = "";
                     if (input || output) {
                         const tokenParts: string[] = [];
                         if (input) tokenParts.push(`↑${fmt(input)}`);
                         if (output) tokenParts.push(`↓${fmt(output)}`);
                         if (cost) tokenParts.push(`$${cost.toFixed(3)}`);
-                        parts.push(tokenParts.join(" "));
+                        right2Plain = tokenParts.join(" ");
                     }
+                    const right2Str = theme.fg("dim", right2Plain);
 
-                    const line2Plain = parts.join(" · ");
-                    const line2 = truncateToWidth(theme.fg("dim", line2Plain) + "  " + contextStr, width);
+                    // Ellipsize left if it encroaches on right
+                    const right2Width = visibleWidth(right2Plain) + (right2Plain ? 2 : 0) + visibleWidth(contextFmt) + 2;
+                    const left2Budget = width - right2Width;
+                    const left2Plain = statePlain.length > left2Budget
+                        ? statePlain.slice(0, Math.max(0, left2Budget - 1)) + "…"
+                        : statePlain;
+                    const left2Str = theme.fg("dim", left2Plain);
+
+                    const spacer = right2Plain ? "  " : "";
+                    const line2 = truncateToWidth(left2Str + spacer + right2Str + "  " + contextStr, width);
 
                     return [line1, line2];
                 },
