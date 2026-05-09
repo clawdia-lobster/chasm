@@ -34,9 +34,11 @@ async function gitCommit(cwd: string, message: string): Promise<string> {
 export default function (pi: ExtensionAPI) {
     // Track whether the model persisted any state this turn
     let persistedThisTurn = false;
+    let turnCount = 0;
 
     pi.on("turn_start", async () => {
         persistedThisTurn = false;
+        turnCount++;
     });
 
     pi.on("tool_call", async (event) => {
@@ -45,21 +47,18 @@ export default function (pi: ExtensionAPI) {
         }
     });
 
-    // --- Nudge if model didn't persist state this turn ---
+    // --- Nudge if model hasn't persisted state recently ---
     pi.on("agent_end", async (_event, ctx) => {
-        if (!persistedThisTurn) {
-            // Don't nudge on the very first turn (bootstrapping)
-            const entries = ctx.sessionManager.getBranch();
-            const userTurns = entries.filter(e => e.type === "message" && e.message.role === "user");
-            if (userTurns.length > 1) {
-                pi.sendUserMessage(
-                    "You didn't persist any state this turn. Check: did the player move? " +
-                    "Did an NPC change? Did time pass? If anything changed, write it to the " +
-                    "relevant files now, then continue the story without comment.",
-                    { deliverAs: "followUp" },
-                );
-            }
-        }
+        // Check every 5 turns whether state was persisted
+        if (turnCount % 5 !== 0) return;
+        if (persistedThisTurn) return;
+
+        pi.sendUserMessage(
+            "You haven't persisted any state recently. Check: has the player moved? " +
+            "Did an NPC change? Did time pass? Is the current place file up to date? " +
+            "If anything changed, write it to the relevant files now, then continue the story without comment.",
+            { deliverAs: "followUp" },
+        );
     });
     // --- Auto-save after every agent turn ---
     pi.on("agent_end", async (_event, ctx) => {
