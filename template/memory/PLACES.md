@@ -2,7 +2,7 @@
 
 ## Overview
 
-Places are **markdown files** in `$PI_MEMORY_DIR/places/*.md`. They define locations in the world. The filename is the place name in kebab-case (e.g., `the-forge.md`). Coordinates are in frontmatter for topology.
+Places are **markdown files** in `$PI_MEMORY_DIR/places/*.md`. They define locations in the world. The filename is the place name in **kebab-case, lowercase, no apostrophes, no trailing dots** (e.g., `the-forge.md`, `arthur-dent-bedroom.md` — not `arthur's-bed..md` or `Arthur's Bedroom.md`). Coordinates are in frontmatter for topology.
 
 ## File Format
 
