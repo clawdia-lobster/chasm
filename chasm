@@ -61,21 +61,6 @@ def cmd_validate(args: argparse.Namespace) -> None:
     sys.exit(result.returncode)
 
 
-def install_precommit_hook(target: Path) -> None:
-    """Install the pre-commit hook into a game's git repo."""
-    hook_dir = target / ".git" / "hooks"
-    if not hook_dir.exists():
-        return  # Not a git repo
-    hook_path = hook_dir / "pre-commit"
-    validator = target / "bin" / "chasm-validate"
-    hook_content = f"""#!/bin/sh
-# Chasm pre-commit hook — validate world integrity before commit
-exec python3 "{validator}" "$(git rev-parse --show-toplevel)"
-"""
-    hook_path.write_text(hook_content)
-    hook_path.chmod(0o755)
-
-
 def cmd_new(args: argparse.Namespace) -> None:
     name = args.name
     if not name or not all(c.isalnum() or c in "_-" for c in name):
