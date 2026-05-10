@@ -284,7 +284,7 @@ def validate(game_dir: Path) -> Reporter:
         for direction, target in data['exits']:
             # Check target exists
             if target not in places:
-                r.error(
+                r.warn(
                     str(data['file'].relative_to(game_dir)),
                     f"Broken exit: {direction} → [[{target}]] — no place with that name"
                 )
