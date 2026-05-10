@@ -16,7 +16,7 @@ This file is for AI agents and LLM-assisted workflows contributing to chasm.
 ## What to Include
 
 - **PR description:** Note AI assistance ("Generated with <AGENT>" or similar).
-- **Commit attribution:** `Co-authored-by: Agent <agent@agent-framework.local>` if you did the bulk of the work.
+- **Commit attribution:** `Co-authored-by: <Agent> <agent@agent-framework.local>` if you did the bulk of the work (fill in as necessary).
 
 ## Do Not
 

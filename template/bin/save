@@ -4,8 +4,26 @@
 
 set -e
 
-cd "$(dirname "$0")/../memory"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+GAME_DIR="$(dirname "$SCRIPT_DIR")"
+
+cd "$GAME_DIR/memory"
 git add -A >/dev/null 2>&1
 
+# Run validator, capture output
+VALIDATOR_OUTPUT=$(python3 "$SCRIPT_DIR/chasm-validate" "$GAME_DIR" 2>&1) || true
+
+# Extract counts from summary line
+ERRORS=$(echo "$VALIDATOR_OUTPUT" | grep -oP '\d+(?= errors)' | head -1 || echo "0")
+WARNINGS=$(echo "$VALIDATOR_OUTPUT" | grep -oP '\d+(?= warnings)' | head -1 || echo "0")
+
+# Commit (non-blocking)
 git commit --quiet -m "$*"
-echo "Saved."
+
+# Show output
+if [ "$ERRORS" -gt 0 ]; then
+    echo "$VALIDATOR_OUTPUT"
+    echo "Saved with ${ERRORS} error(s)."
+else
+    echo "Saved. (${ERRORS} errors, ${WARNINGS} warnings)"
+fi
