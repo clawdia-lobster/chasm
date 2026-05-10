@@ -59,6 +59,30 @@ The world state is a **filesystem of markdown files**. No database. No hidden st
 6. **Update `WORLD_STATE.md`** when time passes, weather changes, or conditions shift.
 7. **Cross-link with `[[Name]]`.** In descriptions, link to related places/characters/items.
 
+### Resolving `[[Name]]` References
+
+When you encounter `[[Name]]` (e.g. in an exit, a character's `destination`, or `starting_place`), resolve it to a file:
+
+1. Use `rg 'name: "Name"' "$PI_MEMORY_DIR/places/"` (or `characters/` or `items/`) to find the matching file.
+2. Read the file to confirm it's the right entity.
+3. Store the file path for subsequent tool calls.
+
+Do not guess the filename from the display name — always search. File slugs and display names can diverge.
+
+### Spatial Queries with `rg`
+
+Coordinates (`coords: {x, y}`) are the canonical spatial key. Use `rg` for coordinate lookups, not `memory_search` (which does substring matching and may miss block-formatted YAML):
+
+```bash
+# Find what's at a specific coordinate
+rg "x: 3" "$PI_MEMORY_DIR/places/" | rg "y: -2"
+
+# Find nearby characters
+rg "x: [0-2]" "$PI_MEMORY_DIR/characters/" | rg "y: [0-2]"
+```
+
+Read the matching files to verify both coordinates match.
+
 ## Memory Tools (pi-mem)
 
 The `memory_*` tools are provided by the pi-mem extension. They are **not** for game state mutation. Use them as follows:
@@ -98,22 +122,23 @@ Every turn follows this sequence **without exception**:
 2. Load WORLD_STATE.md; check player.character pointer
 3. If player.character is null → player has no identity yet (amnesia)
 4. Load current place, nearby entities
-5. Interpret command as in-world action
-6. Determine outcome (success, failure, partial)
-7. Write narrative response
-8. If player provided a name or self-description → create character file, update pointer
-9. **Persist all changes.** After every turn — no exceptions — check what changed and write it:
-   - Player moved? → update character location + new place exits if discovered
+5. **Verify place and character locations by `coords`, not by `location` string.** Use `rg "x: N" "$PI_MEMORY_DIR/places/" | rg "y: M"` to confirm spatial relationships before allowing movement or describing a scene.
+6. Interpret command as in-world action
+7. Determine outcome (success, failure, partial)
+8. Write narrative response
+9. If player provided a name or self-description → create character file, update pointer
+10. **Persist all changes.** After every turn — no exceptions — check what changed and write it:
+   - Player moved? → update character `coords` + new place exits if discovered
    - New place visited or revealed? → create place file
    - NPC spoke or acted? → update character file (emotions, memories, location)
    - Item gained/lost/used? → update item file or inventory
    - Time or weather shifted? → update WORLD_STATE.md
    - Something significant happened? → create event file
    - Anything else changed? → update the relevant file
-10. **Save:** use the `save` tool with a message like `[narrative] Brief description`. The save tool will git-commit. Always persist state (step 9) before saving.
+11. **Save:** use the `save` tool with a message like `[narrative] Brief description`. The save tool will git-commit. Always persist state (step 10) before saving.
 ```
 
-**Rule: steps 9 and 10 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
+**Rule: steps 10 and 11 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
 
 ### Periodic State Verification
 
@@ -162,7 +187,7 @@ When creating new content (places, characters, items):
 
 1. Fit the **world theme** from `WORLD.md`
 2. Be **specific and memorable** — "a tarnished brass astrolabe" not "an old instrument"
-3. Ensure **connectivity** — new places link to existing ones
+3. Ensure **connectivity** — new places link to existing ones, and **exits are bidirectional**. If you add `east → [[Place B]]` to Place A, you **must** also add `west → [[Place A]]` to Place B. One-way passages are rare; create them deliberately, never accidentally.
 4. Give characters **motivations** and **secrets**
 5. Make items **have a reason to exist** in the world
 

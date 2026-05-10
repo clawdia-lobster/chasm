@@ -2,7 +2,23 @@
 
 ## Overview
 
-Characters are **markdown files** in `$PI_MEMORY_DIR/characters/*.md`. They define NPCs and the player character. The filename is the character's canonical name in kebab-case (e.g., `grimbold-the-smith.md`).
+Characters are **markdown files** in `$PI_MEMORY_DIR/characters/*.md`. They define NPCs and the player character.
+
+## Slug Derivation
+
+When creating a new character file, derive the filename from the `name` field using this algorithm:
+
+1. **Lowercase** the entire string.
+2. **Replace all non-alphanumeric characters** with hyphens. (Spaces, apostrophes, commas, periods, etc. all become hyphens.)
+3. **Collapse** consecutive hyphens to a single hyphen.
+4. **Strip** leading and trailing hyphens.
+5. Append `.md`.
+
+| `name:` | Filename |
+|---------|----------|
+| `Grimbold the Smith` | `grimbold-the-smith.md` |
+| `Elara Vex` | `elara-vex.md` |
+| `O'Connor` | `oconnor.md` |
 
 ## File Format
 
@@ -13,8 +29,8 @@ gender: "M"
 appearance: "huge, soot-stained, grey beard in braids, missing left ear"
 health: "healthy"
 emotions: "gruff, secretly worried"
-location: "The Forge, Anchor Street"  # or coords: {x: 0, y: 0}
-coords: {x: 0, y: 0}
+location: "The Forge, Anchor Street"  # narrative convenience
+coords: {x: 0, y: 0}  # canonical spatial key
 objective: "Find out who sabotaged his forge"
 score: 0
 
@@ -57,8 +73,8 @@ Grimbold stands at his anvil, hammer frozen mid-strike. The forge is cold — th
 | `appearance` | str | Yes | Physical description, current state |
 | `health` | str | Yes | `healthy wounded dying dead` |
 | `emotions` | str | No | Current mood |
-| `location` | str | No | Place name (more readable) |
-| `coords` | dict | No | `{x: int, y: int}` |
+| `location` | str | No | Place name for readability. Must match the place whose `coords` match this character's `coords`. |
+| `coords` | dict | No | `{x: int, y: int}` — canonical spatial key. Source of truth for where this character is. |
 | `objective` | str | No | Current goal (drives behaviour) |
 | `score` | int | No | Achievement/quest score |
 | `backstory` | str | No | Origin story |
@@ -77,6 +93,16 @@ Grimbold stands at his anvil, hammer frozen mid-strike. The forge is cold — th
 ## Body
 
 Write the character's **current narrative description** — what the player sees when they encounter them. Update this when appearance or circumstances change.
+
+## Spatial Tracking
+
+Characters occupy a place in the world via `coords`. This is the **canonical key** for location. The `location` field is narrative convenience — it should match the display `name` of the place at those `coords`.
+
+When moving a character:
+1. Update `coords` to the new place's coordinates.
+2. Update `location` to that place's display `name`.
+
+If `location` and `coords` disagree, `coords` wins. Resolve the correct `location` by finding the place file whose `coords` match.
 
 ## Cross-Linking
 

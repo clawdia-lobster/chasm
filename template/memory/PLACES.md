@@ -2,7 +2,25 @@
 
 ## Overview
 
-Places are **markdown files** in `$PI_MEMORY_DIR/places/*.md`. They define locations in the world. The filename is the place name in **kebab-case, lowercase, no apostrophes, no trailing dots** (e.g., `the-forge.md`, `arthur-dent-bedroom.md` — not `arthur's-bed..md` or `Arthur's Bedroom.md`). Coordinates are in frontmatter for topology.
+Places are **markdown files** in `$PI_MEMORY_DIR/places/*.md`. They define locations in the world. Coordinates are in frontmatter for topology.
+
+## Slug Derivation
+
+When creating a new place file, derive the filename from the `name` field using this algorithm:
+
+1. **Lowercase** the entire string.
+2. **Replace all non-alphanumeric characters** with hyphens. (Spaces, commas, apostrophes, periods, colons, etc. all become hyphens.)
+3. **Collapse** consecutive hyphens to a single hyphen.
+4. **Strip** leading and trailing hyphens.
+5. Append `.md`.
+
+| `name:` | Filename |
+|---------|----------|
+| `The Forge, Anchor Street` | `the-forge-anchor-street.md` |
+| `St. John's Gate` | `st-johns-gate.md` |
+| `O'Connor's Pub` | `oconnors-pub.md` |
+| `Room 42` | `room-42.md` |
+| `The Well...` | `the-well.md` |
 
 ## File Format
 
@@ -84,7 +102,7 @@ When generating a new place:
 3. **Outdoor/exterior places**: prefer 2+ exits. **Rooms/sub-places** (cupboards, cellars, alcoves): one exit back to parent is normal and expected
 4. **Dead ends are fine** if deliberate — a hidden chamber, a collapsing cul-de-sac, a locked cell. Just don't accidentally strand the player
 5. Add **something to interact with** — an item, a character, a secret
-6. **Link backward** — ensure at least one existing place links here
+6. **Link backward** — when you add an exit from place A to place B, you **must** also add the reverse exit from place B to place A (north ↔ south, east ↔ west, up ↔ down, etc.). One-way passages are rare; if you deliberately create one, note it in both places. Ensure no place is orphaned — every outdoor place needs at least one incoming exit.
 
 ## Place States
 
@@ -123,13 +141,20 @@ When generating a new place:
 
 ### Grepping Coordinates
 
-```bash
-# Find what's at origin
-rg "coords: {x: 0" "$PI_MEMORY_DIR/places/"
+Use `rg` (ripgrep) for coordinate lookups. YAML frontmatter may use inline or block form, so match `x:` and `y:` separately.
 
-# Find nearby things (~2 units)
-rg "coords: {x: [0-2]" "$PI_MEMORY_DIR/places/"
+```bash
+# Find the place file at origin — match x: 0 AND y: 0
+rg "x: 0" "$PI_MEMORY_DIR/places/" | rg "y: 0"
+
+# Find nearby things in a radius (~2 units around {x: 1, y: 1})
+# Read matching files and check both coordinates
+rg "x: [0-2]" "$PI_MEMORY_DIR/places/" | rg "y: [0-2]"
 ```
+
+### Coordinates as Canonical Key
+
+`coords` is the **canonical spatial key**. `name` is the human-readable label. When resolving spatial queries, prefer `coords` over `name`. If two entities have the same `coords`, they occupy the same location.
 
 ## Topology
 
