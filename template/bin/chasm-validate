@@ -154,7 +154,6 @@ class Reporter:
     def __init__(self):
         self.errors = []
         self.warnings = []
-        self.infos = []
 
     def error(self, path: str, msg: str):
         self.errors.append(f"  ERROR  {path}: {msg}")
@@ -162,15 +161,10 @@ class Reporter:
     def warn(self, path: str, msg: str):
         self.warnings.append(f"  WARN   {path}: {msg}")
 
-    def info(self, path: str, msg: str):
-        self.infos.append(f"  INFO   {path}: {msg}")
-
     def has_issues(self) -> bool:
         return bool(self.errors or self.warnings)
 
     def print_report(self):
-        if self.infos:
-            print("\n".join(self.infos))
         if self.warnings:
             print("\n".join(self.warnings))
         if self.errors:
@@ -219,7 +213,7 @@ def validate(game_dir: Path) -> Reporter:
             slug = make_slug(name)
             expected = slug + '.md'
             if fpath.name != expected:
-                r.info(
+                r.warn(
                     str(fpath.relative_to(game_dir)),
                     f"Slug mismatch: filename is '{fpath.name}', expected '{expected}' from name='{name}'"
                 )
@@ -415,8 +409,6 @@ def validate(game_dir: Path) -> Reporter:
     print(f"Validated {total} entities in {game_dir}:")
     print(f"  {len(places)} places, {len(characters)} characters, {len(items)} items, {len(events)} events")
     print(f"  {len(r.errors)} errors, {len(r.warnings)} warnings")
-    if r.infos:
-        print(f"  ({len(r.infos)} informational notes)")
 
     return r
 
