@@ -2,7 +2,23 @@
 
 ## Overview
 
-Items are **markdown files** in `$PI_MEMORY_DIR/items/*.md`. They define portable objects. The filename is the item name in kebab-case (e.g., `rusty-key.md`).
+Items are **markdown files** in `$PI_MEMORY_DIR/items/*.md`. They define portable objects.
+
+## Slug Derivation
+
+When creating a new item file, derive the filename from the `name` field using this algorithm:
+
+1. **Lowercase** the entire string.
+2. **Replace all non-alphanumeric characters** with hyphens. (Spaces, apostrophes, commas, periods, etc. all become hyphens.)
+3. **Collapse** consecutive hyphens to a single hyphen.
+4. **Strip** leading and trailing hyphens.
+5. Append `.md`.
+
+| `name:` | Filename |
+|---------|----------|
+| `Rusty Key` | `rusty-key.md` |
+| `Brass Astrolabe` | `brass-astrolabe.md` |
+| `Grimbold's Hammer` | `grimbolds-hammer.md` |
 
 ## File Format
 
