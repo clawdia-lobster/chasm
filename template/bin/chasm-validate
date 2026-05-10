@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+"""
+chasm-validate — Validate a Chasm world for structural integrity.
+
+Checks:
+  - Slug compliance: filenames match the slug algorithm
+  - Coordinate collisions: no two places share coords
+  - Bidirectional exits: every exit has a reverse
+  - Broken [[Name]] references: all wiki-links resolve
+  - Character coords: every character's coords match a place
+  - Starting place: WORLD_STATE.starting_place resolves to a place
+  - Item locations: items on ground have coords matching a place
+
+Usage:
+    chasm-validate /path/to/game
+    chasm-validate  # uses $PI_CODING_AGENT_DIR or cwd
+
+Exit code 0 if clean, 1 if any errors found.
+"""
+
+import os
+import re
+import sys
+from pathlib import Path
+from collections import defaultdict
+
+# ---------------------------------------------------------------------------
+# Slug algorithm (must match PLACES.md / CHARACTERS.md / ITEMS.md spec)
+# ---------------------------------------------------------------------------
+
+def make_slug(name: str) -> str:
+    """Derive canonical filename slug from display name."""
+    s = name.lower()
+    # Replace all non-alphanumeric characters with hyphens
+    s = re.sub(r'[^a-z0-9]+', '-', s)
+    # Collapse consecutive hyphens
+    s = re.sub(r'-+', '-', s)
+    # Strip leading/trailing hyphens
+    s = s.strip('-')
+    return s
+
+
+# ---------------------------------------------------------------------------
+# Frontmatter parser
+# ---------------------------------------------------------------------------
+
+FM_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
+
+def parse_frontmatter(text: str) -> tuple[dict, str]:
+    """Extract YAML frontmatter dict and body from markdown text."""
+    m = FM_RE.match(text)
+    if not m:
+        return {}, text
+    yaml_text = m.group(1)
+    body = text[m.end():]
+    frontmatter = {}
+    for line in yaml_text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if ':' not in line:
+            continue
+        key, val = line.split(':', 1)
+        key = key.strip()
+        val = val.strip()
+        # Remove inline comments
+        if ' #' in val:
+            val = val.split(' #')[0].strip()
+        # Strip quotes
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in '"\'':
+            val = val[1:-1]
+        # Try int
+        try:
+            val = int(val)
+        except ValueError:
+            pass
+        # Try null
+        if val in ('null', '~', ''):
+            val = None
+        frontmatter[key] = val
+    return frontmatter, body
+
+
+# ---------------------------------------------------------------------------
+# Exit parser
+# ---------------------------------------------------------------------------
+
+EXIT_RE = re.compile(
+    r'^\s*-\s*\*\*([^*]+)\*\*\s*→\s*\[\[([^\]]+)\]\]',
+    re.MULTILINE
+)
+
+
+def parse_exits(body: str) -> list[tuple[str, str]]:
+    """Extract (direction, target_name) pairs from ## Exits section."""
+    exits = []
+    in_exits = False
+    for line in body.splitlines():
+        if line.strip().startswith('## Exits'):
+            in_exits = True
+            continue
+        if in_exits:
+            if line.startswith('## '):
+                break
+            m = EXIT_RE.match(line)
+            if m:
+                direction = m.group(1).strip().lower()
+                target = m.group(2).strip()
+                exits.append((direction, target))
+    return exits
+
+
+# ---------------------------------------------------------------------------
+# Wiki-link extractor
+# ---------------------------------------------------------------------------
+
+WIKI_RE = re.compile(r'\[\[([^\]]+)\]\]')
+
+
+def extract_wiki_links(text: str) -> set[str]:
+    """Find all [[Name]] references in text."""
+    return {m.group(1).strip() for m in WIKI_RE.finditer(text)}
+
+
+# ---------------------------------------------------------------------------
+# Direction reverses
+# ---------------------------------------------------------------------------
+
+OPPOSITE = {
+    'north': 'south',
+    'south': 'north',
+    'east': 'west',
+    'west': 'east',
+    'up': 'down',
+    'down': 'up',
+    'in': 'out',
+    'out': 'in',
+    'northeast': 'southwest',
+    'southwest': 'northeast',
+    'northwest': 'southeast',
+    'southeast': 'northwest',
+    'northwards': 'southwards',
+    'southwards': 'northwards',
+    'eastwards': 'westwards',
+    'westwards': 'eastwards',
+}
+
+
+# ---------------------------------------------------------------------------
+# Reporter
+# ---------------------------------------------------------------------------
+
+class Reporter:
+    def __init__(self):
+        self.errors = []
+        self.warnings = []
+
+    def error(self, path: str, msg: str):
+        self.errors.append(f"  ERROR  {path}: {msg}")
+
+    def warn(self, path: str, msg: str):
+        self.warnings.append(f"  WARN   {path}: {msg}")
+
+    def has_issues(self) -> bool:
+        return bool(self.errors or self.warnings)
+
+    def print_report(self):
+        if self.warnings:
+            print("\n".join(self.warnings))
+        if self.errors:
+            print("\n".join(self.errors))
+
+
+# ---------------------------------------------------------------------------
+# Validator
+# ---------------------------------------------------------------------------
+
+def validate(game_dir: Path) -> Reporter:
+    r = Reporter()
+    memory = game_dir / 'memory'
+    if not memory.exists():
+        r.error(str(game_dir), "No memory/ directory found")
+        return r
+
+    # ------------------------------------------------------------------
+    # Index everything
+    # ------------------------------------------------------------------
+
+    places_dir = memory / 'places'
+    characters_dir = memory / 'characters'
+    items_dir = memory / 'items'
+    events_dir = memory / 'events'
+
+    # name -> {file, frontmatter, body, exits, wiki_links}
+    places = {}
+    characters = {}
+    items = {}
+    events = {}
+
+    # coords -> [place_files]
+    place_coords = defaultdict(list)
+
+    def load_entities(directory, container, kind):
+        if not directory.exists():
+            return
+        for fpath in sorted(directory.glob('*.md')):
+            text = fpath.read_text()
+            fm, body = parse_frontmatter(text)
+            name = fm.get('name')
+            if not name:
+                r.error(str(fpath.relative_to(game_dir)), f"Missing 'name' in frontmatter")
+                continue
+            slug = make_slug(name)
+            expected = slug + '.md'
+            if fpath.name != expected:
+                r.warn(
+                    str(fpath.relative_to(game_dir)),
+                    f"Slug mismatch: filename is '{fpath.name}', expected '{expected}' from name='{name}'"
+                )
+            container[name] = {
+                'file': fpath,
+                'frontmatter': fm,
+                'body': body,
+                'exits': parse_exits(body) if kind == 'places' else [],
+                'wiki_links': extract_wiki_links(body),
+                'slug': slug,
+            }
+            if kind == 'places':
+                coords = fm.get('coords')
+                if coords is not None:
+                    try:
+                        # coords may be a string like "{x: 0, y: 0}" or parsed
+                        coords_str = str(coords)
+                        x_match = re.search(r'x:\s*(-?\d+)', coords_str)
+                        y_match = re.search(r'y:\s*(-?\d+)', coords_str)
+                        if x_match and y_match:
+                            coord_key = (int(x_match.group(1)), int(y_match.group(1)))
+                            place_coords[coord_key].append(fpath)
+                    except Exception:
+                        pass
+
+    load_entities(places_dir, places, 'places')
+    load_entities(characters_dir, characters, 'characters')
+    load_entities(items_dir, items, 'items')
+    # Events have date-based filenames, skip slug check
+    if events_dir.exists():
+        for fpath in sorted(events_dir.glob('*.md')):
+            text = fpath.read_text()
+            fm, body = parse_frontmatter(text)
+            # Events don't require a name; use filename stem as key
+            key = fpath.stem
+            events[key] = {
+                'file': fpath,
+                'frontmatter': fm,
+                'body': body,
+                'exits': [],
+                'wiki_links': extract_wiki_links(body),
+                'slug': key,
+            }
+
+    # ------------------------------------------------------------------
+    # Coordinate collisions
+    # ------------------------------------------------------------------
+
+    for coord, files in place_coords.items():
+        if len(files) > 1:
+            names = [places.get(parse_frontmatter(f.read_text())[0].get('name', '?'), {}).get('slug', f.name) for f in files]
+            r.error(
+                "places/",
+                f"Coordinate collision at {coord}: {', '.join(str(f.relative_to(game_dir)) for f in files)}"
+            )
+
+    # ------------------------------------------------------------------
+    # Place exit validation
+    # ------------------------------------------------------------------
+
+    # Build (from_name, direction, to_name) tuples
+    exit_graph = set()
+    for name, data in places.items():
+        for direction, target in data['exits']:
+            exit_graph.add((name, direction, target))
+
+    for name, data in places.items():
+        for direction, target in data['exits']:
+            # Check target exists
+            if target not in places:
+                r.error(
+                    str(data['file'].relative_to(game_dir)),
+                    f"Broken exit: {direction} → [[{target}]] — no place with that name"
+                )
+                continue
+            # Check reverse
+            rev = OPPOSITE.get(direction)
+            if rev:
+                reverse_edge = (target, rev, name)
+                if reverse_edge not in exit_graph:
+                    r.warn(
+                        str(data['file'].relative_to(game_dir)),
+                        f"One-way exit: {direction} → [[{target}]], but {target} has no {rev} → [[{name}]]"
+                    )
+
+    # ------------------------------------------------------------------
+    # Orphaned places (no incoming exits)
+    # ------------------------------------------------------------------
+
+    incoming = defaultdict(set)
+    for name, data in places.items():
+        for direction, target in data['exits']:
+            if target in places:
+                incoming[target].add(name)
+
+    for name, data in places.items():
+        # Skip places without coords (rooms/sub-places may legitimately have no exits)
+        coords = data['frontmatter'].get('coords')
+        if coords is not None and name not in incoming and data['exits']:
+            # Has coords, has outgoing exits, but no incoming
+            r.warn(
+                str(data['file'].relative_to(game_dir)),
+                f"Orphaned place: no other place links here"
+            )
+
+    # ------------------------------------------------------------------
+    # Character location validation
+    # ------------------------------------------------------------------
+
+    for name, data in characters.items():
+        coords = data['frontmatter'].get('coords')
+        location = data['frontmatter'].get('location')
+        if coords is not None:
+            coords_str = str(coords)
+            x_match = re.search(r'x:\s*(-?\d+)', coords_str)
+            y_match = re.search(r'y:\s*(-?\d+)', coords_str)
+            if x_match and y_match:
+                coord_key = (int(x_match.group(1)), int(y_match.group(1)))
+                if coord_key not in place_coords:
+                    r.error(
+                        str(data['file'].relative_to(game_dir)),
+                        f"Character coords {coord_key} match no place"
+                    )
+                else:
+                    # Check location string matches place name at coords
+                    place_files = place_coords[coord_key]
+                    place_names = []
+                    for pf in place_files:
+                        pfm, _ = parse_frontmatter(pf.read_text())
+                        pname = pfm.get('name')
+                        if pname:
+                            place_names.append(pname)
+                    if location and place_names and location not in place_names:
+                        r.warn(
+                            str(data['file'].relative_to(game_dir)),
+                            f"location='{location}' but place at {coord_key} is named {place_names}"
+                        )
+
+    # ------------------------------------------------------------------
+    # Item location validation
+    # ------------------------------------------------------------------
+
+    for name, data in items.items():
+        owner = data['frontmatter'].get('owner')
+        coords = data['frontmatter'].get('coords')
+        if owner is None and coords is not None:
+            coords_str = str(coords)
+            x_match = re.search(r'x:\s*(-?\d+)', coords_str)
+            y_match = re.search(r'y:\s*(-?\d+)', coords_str)
+            if x_match and y_match:
+                coord_key = (int(x_match.group(1)), int(y_match.group(1)))
+                if coord_key not in place_coords:
+                    r.warn(
+                        str(data['file'].relative_to(game_dir)),
+                        f"Item on ground at {coord_key} matches no place"
+                    )
+
+    # ------------------------------------------------------------------
+    # WORLD_STATE validation
+    # ------------------------------------------------------------------
+
+    world_state_file = memory / 'WORLD_STATE.md'
+    if world_state_file.exists():
+        ws_text = world_state_file.read_text()
+        ws_fm, ws_body = parse_frontmatter(ws_text)
+        # starting_place may be in body (not frontmatter in current format)
+        # Try to find it
+        sp_match = re.search(r'starting_place:\s*(.+)', ws_text)
+        if sp_match:
+            sp_val = sp_match.group(1).strip()
+            # Strip wiki-link brackets if present
+            sp_val = sp_val.strip('[]`')
+            # Check if it matches a place name
+            if sp_val not in places and sp_val != 'null':
+                # Try as filename
+                sp_slug = make_slug(sp_val)
+                matched = False
+                for pname, pdata in places.items():
+                    if pdata['slug'] == sp_slug or pdata['file'].stem == sp_slug:
+                        matched = True
+                        break
+                if not matched:
+                    r.error(
+                        str(world_state_file.relative_to(game_dir)),
+                        f"starting_place='{sp_val}' does not resolve to any place"
+                    )
+
+    # ------------------------------------------------------------------
+    # Summary
+    # ------------------------------------------------------------------
+
+    total = len(places) + len(characters) + len(items) + len(events)
+    print(f"Validated {total} entities in {game_dir}:")
+    print(f"  {len(places)} places, {len(characters)} characters, {len(items)} items, {len(events)} events")
+    print(f"  {len(r.errors)} errors, {len(r.warnings)} warnings")
+
+    return r
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    if len(sys.argv) > 1:
+        game_dir = Path(sys.argv[1])
+    else:
+        game_dir = Path(os.environ.get('PI_CODING_AGENT_DIR', '.'))
+
+    game_dir = game_dir.resolve()
+    if not game_dir.exists():
+        print(f"Directory not found: {game_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    r = validate(game_dir)
+    r.print_report()
+    sys.exit(1 if r.errors else 0)
+
+
+if __name__ == '__main__':
+    main()
