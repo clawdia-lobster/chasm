@@ -36,6 +36,12 @@ Key format specs live in the template itself:
 A world workspace is self-contained. Distribute it as a git repository. Players
 need only `pi` and the world files.
 
+## Coordinates
+
+Coordinates indicate location, not exact position. Multiple places may share `(x, y)`,
+such as rooms within a building. The narrator disambiguates coordinate collisions
+by name and narrative context.
+
 ## System Structure
 
 ```

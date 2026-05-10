@@ -265,9 +265,9 @@ def validate(game_dir: Path) -> Reporter:
     for coord, files in place_coords.items():
         if len(files) > 1:
             names = [places.get(parse_frontmatter(f.read_text())[0].get('name', '?'), {}).get('slug', f.name) for f in files]
-            r.error(
+            r.warn(
                 "places/",
-                f"Coordinate collision at {coord}: {', '.join(str(f.relative_to(game_dir)) for f in files)}"
+                f"Co-located at {coord}: {', '.join(str(f.relative_to(game_dir)) for f in files)}"
             )
 
     # ------------------------------------------------------------------
