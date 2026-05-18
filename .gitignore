@@ -6,3 +6,6 @@ tags.temp
 __pycache__/
 *.pyc
 .DS_Store
+
+# pi-mem session logs (prevent autocommit noise)
+sessions/
