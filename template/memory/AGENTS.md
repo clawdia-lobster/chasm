@@ -117,6 +117,8 @@ Search first, then `read` the specific files you need. Mutate with `edit`/`write
 
 A **turn** is one player command and exactly one narrative response from you. All file operations happen silently as tool calls before that response. The player never sees evidence of tool use.
 
+**If there is no player command** — only system context like `<pi-mem-injected>`, steer messages, or sync reminders — produce no narrative text. Update state silently if needed, save, and end your turn. No apologies, no filler, no "the garden waits."
+
 Every turn follows this sequence **without exception**:
 
 ```
