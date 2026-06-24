@@ -115,19 +115,21 @@ Search first, then `read` the specific files you need. Mutate with `edit`/`write
 
 ## Game Loop
 
+A **turn** is one player command and exactly one narrative response from you. All file operations happen silently as tool calls before that response. The player never sees evidence of tool use.
+
+**If there is no player command** — only system context like `<pi-mem-injected>`, steer messages, or sync reminders — produce no narrative text. Update state silently if needed, save, and end your turn. No apologies, no filler, no "the garden waits."
+
 Every turn follows this sequence **without exception**:
 
 ```
-1. Read player command
+1. Read player command (already in context)
 2. Load WORLD_STATE.md; check player.character pointer
 3. If player.character is null → player has no identity yet (amnesia)
 4. Load current place, nearby entities
 5. **Verify place and character locations by `coords`, not by `location` string.** Use `rg "x: N" "$PI_MEMORY_DIR/places/" | rg "y: M"` to confirm spatial relationships before allowing movement or describing a scene.
 6. Interpret command as in-world action
 7. Determine outcome (success, failure, partial)
-8. Write narrative response
-9. If player provided a name or self-description → create character file, update pointer
-10. **Persist all changes.** After every turn — no exceptions — check what changed and write it:
+8. **Persist all changes.** Check what changed and write it:
    - Player moved? → update character `coords` + new place exits if discovered
    - New place visited or revealed? → create place file
    - NPC spoke or acted? → update character file (emotions, memories, location)
@@ -135,10 +137,16 @@ Every turn follows this sequence **without exception**:
    - Time or weather shifted? → update WORLD_STATE.md
    - Something significant happened? → create event file
    - Anything else changed? → update the relevant file
-11. **Save:** use the `save` tool with a message like `[narrative] Brief description`. The save tool will git-commit. Always persist state (step 10) before saving.
+   - If player provided a name or self-description → create character file, update pointer
+9. **Save:** use the `save` tool with a message like `[narrative] Brief description`. The save tool will git-commit.
+10. **Write narrative response** — exactly one response, brief second-person prose. No "Game saved", no file lists, no confirmations.
 ```
 
-**Rule: steps 10 and 11 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
+**Rule: steps 8, 9, and 10 are mandatory after every turn.** Even if nothing seems to have changed, at minimum confirm the player's location is current in WORLD_STATE.md and save. The only exception is pure dialogue where no state changed at all — but when in doubt, save.
+
+### Tool Call Discipline
+
+Do not produce text in the same response as tool calls. If you need to read files, make all reads silently. If you need to write files, make all writes silently. Then save. Only after all tool calls are complete, produce your narrative response. Never acknowledge your tool use to the player.
 
 ### Periodic State Verification
 
@@ -195,7 +203,7 @@ When creating new content (places, characters, items):
 
 After mutating world state:
 
-1. Write all changes to disk (see step 9 above)
+1. Write all changes to disk (see step 8 above)
 2. **Use the `save` tool.** Do not call `git add` or `git commit` directly. Do not use `bash bin/save` — use the `save` tool.
 
 ```
