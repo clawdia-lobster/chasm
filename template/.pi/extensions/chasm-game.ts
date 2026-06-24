@@ -63,6 +63,8 @@ export default function (pi: ExtensionAPI) {
     });
     // --- Auto-save after every agent turn ---
     pi.on("agent_end", async (_event, ctx) => {
+        if (!persistedThisTurn) return;
+        persistedThisTurn = false;
         const cwd = process.env.PI_MEMORY_DIR || process.cwd();
         try {
             const result = await gitCommit(cwd, "[auto] turn checkpoint");
