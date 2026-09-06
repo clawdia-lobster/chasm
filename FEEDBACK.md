@@ -58,3 +58,9 @@ From the 50-years-of-text-games comparison, in rough build order:
 - Brevity is craft: the reader supplies the graphics.
 - The system prompt is for mechanical, unconditional, per-turn rules only;
   reasoned, tunable guidance (like PRINCIPLES.md) belongs in context.
+
+## 2026-09-06 - playtest finding: amnesiac condition sticks after identity reveal
+
+- Symptom: footer keeps showing "amnesiac" after the player identifies (baskerville playtest).
+- Mechanism: template WORLD_STATE.md ships `condition: amnesiac` for the amnesia bootstrap; AGENTS.md's identity-reveal steps (create character file, set player.character pointer) never clear it, and the footer displays `condition` until it is no longer "amnesiac".
+- Fix: AGENTS.md bootstrap step 5 now sets the condition to `normal` on identity reveal (PR #27); the live game was patched directly.
